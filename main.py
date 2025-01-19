@@ -16,8 +16,8 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT+40))
 pygame.display.set_caption("CHESSBOARD")
 
 # Initial FEN string
-# initial_fen_string = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
-initial_fen_string = "rq/8/q4Kk/6B/8/8/8/Q3R"
+initial_fen_string = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
+# initial_fen_string = "4k2r/4P/q4Kk/6Bn/8/8/P/4K2R"
 
 # Initialize font for text rendering
 font = pygame.font.SysFont(None, 36)  # Default font, size 36
@@ -34,6 +34,7 @@ def main():
 
     # Game loop
     running = True
+    game_over = False
     while running:
         # Draw the board with pieces
         screen.fill((0, 0, 0))  # Optional: fill the screen with black before drawing
@@ -41,6 +42,8 @@ def main():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
+            elif game_over:
+                continue
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 # Get the square indices where the mouse clicked
                 mouse_x, mouse_y = pygame.mouse.get_pos()
@@ -66,12 +69,17 @@ def main():
 
             elif event.type == pygame.MOUSEBUTTONUP:
                 # Stop dragging when mouse button is released
-                board.remove_avaliable_moves()
                 if dragging:
                     mouse_x, mouse_y = pygame.mouse.get_pos()
                     col_idx, row_idx = mouse_x // SQUARE_SIZE, mouse_y // SQUARE_SIZE
-                    board.stop_dragging(col_idx, row_idx)
+                    board.stop_dragging(col_idx, row_idx, board)
                     dragging = False
+                board.remove_avaliable_moves()
+                if board.game_over:
+                    turn_text = font.render(f"GAME OVER!!! winnner is {board.winner}", True, (255, 255, 255))  
+                    screen.blit(turn_text, (10, HEIGHT + 10))
+                    pygame.display.flip()
+                    game_over = True
 
         # Draw the board and any pieces
         board.draw_board_with_pieces()
@@ -84,11 +92,14 @@ def main():
                 piece_y = piece_drag_y - piece_image.get_height() // 2
                 screen.blit(piece_image, (piece_x, piece_y))
         
-        # Display current turn
-        turn = "White" if board.color_to_move == 8 else "Black"
-        turn_text = font.render(f"Turn: {turn}", True, (255, 255, 255))  # White text
-        screen.blit(turn_text, (10, HEIGHT + 10))  # Position text below the board
-
+        # Display current turn or game over message
+        if game_over:
+            winner_text = font.render(f"GAME OVER! Winner: {board.winner}", True, (255, 0, 0))  # Red text
+            screen.blit(winner_text, (10, HEIGHT + 10))
+        else:
+            turn = "White" if board.color_to_move == 8 else "Black"
+            turn_text = font.render(f"Turn: {turn}", True, (255, 255, 255))  # White text
+            screen.blit(turn_text, (10, HEIGHT + 10))
         pygame.display.flip()
     pygame.quit()
     sys.exit()

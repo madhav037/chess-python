@@ -64,6 +64,9 @@ def generate_sliding_moves(startSquare, piece, board):
         for n in range(num_squares_to_edge[startSquare][directionIndex]):
             # Calculate the target square
             target_square = startSquare + direction_offsets[directionIndex] * (n + 1)
+            
+            if target_square < 0 or target_square > 63:
+                continue
             piece_on_target_square = board.get_piece(target_square)
             
             # If the square is empty, add it as a valid move
@@ -80,3 +83,126 @@ def generate_sliding_moves(startSquare, piece, board):
                 moves.append(Move(startSquare, target_square))
                 break
     print("got moves in 2 : ", len(moves))
+    
+    
+def generate_pawn_moves(board):
+    from GUI.pieces import Pieces
+    global moves
+    moves.clear()
+    for startSquare in range(64):
+        piece = board.get_piece(startSquare)
+        if piece == None:
+            continue
+        if Pieces.get_piece_color(piece) == board.color_to_move:
+            if Pieces.is_type(piece) == Pieces.pawn:
+                generate_pawn_move(startSquare, piece, board)
+    return moves
+
+def generate_pawn_move(startSquare, piece, board):
+    from GUI.pieces import Pieces
+    direction = -1 if Pieces.get_piece_color(piece) == Pieces.white else 1
+    target_square = startSquare + 8 * direction
+    
+    # ? Error may happen 🤷‍♂️
+    if target_square < 0 or target_square > 63:
+        return
+    if board.get_piece(target_square) is None:
+        moves.append(Move(startSquare, target_square))
+
+    # Check for double move
+    if (startSquare // 8 == 6 and Pieces.get_piece_color(piece) == Pieces.white) or (startSquare // 8 == 1 and Pieces.get_piece_color(piece) == Pieces.black):
+        target_square = startSquare + 16 * direction
+        if board.get_piece(target_square) is None:
+            moves.append(Move(startSquare, target_square))
+    
+    # Check for captures
+    for cross in [7, 9]:
+        target_square = startSquare + cross * direction
+        if Pieces.get_piece_color(board.get_piece(target_square)) != Pieces.get_piece_color(piece) and board.get_piece(target_square) is not None:
+            moves.append(Move(startSquare, target_square))
+    
+    print("got moves in 3 : ", len(moves))
+
+def generate_knight_moves(board):
+    from GUI.pieces import Pieces
+    global moves
+    moves.clear()
+    for startSquare in range(64):
+        piece = board.get_piece(startSquare)
+        if piece == None:
+            continue
+        if Pieces.get_piece_color(piece) == board.color_to_move:
+            if Pieces.is_type(piece) == Pieces.knight:
+                generate_knight_move(startSquare, piece, board)
+    return moves
+
+def generate_knight_move(startSquare, piece, board):
+    from GUI.pieces import Pieces
+    for direction in [-17, -15, -10, -6, 6, 10, 15, 17]:
+        target_square = startSquare + direction
+        if target_square < 0 or target_square > 63:
+            continue
+        if Pieces.get_piece_color(board.get_piece(target_square)) != Pieces.get_piece_color(piece):
+            moves.append(Move(startSquare, target_square))
+    print("got moves in 4 : ", len(moves))
+    
+def generate_king_moves(board):
+    from GUI.pieces import Pieces
+    global moves
+    moves.clear()
+    for startSquare in range(64):
+        piece = board.get_piece(startSquare)
+        if piece == None:
+            continue
+        if Pieces.get_piece_color(piece) == board.color_to_move:
+            if Pieces.is_type(piece) == Pieces.king:
+                generate_king_move(startSquare, piece, board)
+    return moves
+
+def generate_king_move(startSquare, piece, board):
+    from GUI.pieces import Pieces
+    for direction in [-9, -8, -7, -1, 1, 7, 8, 9]:
+        target_square = startSquare + direction
+        if target_square < 0 or target_square > 63:
+            continue
+        if Pieces.get_piece_color(board.get_piece(target_square)) != Pieces.get_piece_color(piece):
+            moves.append(Move(startSquare, target_square))
+        
+        if startSquare == 4 and piece == "k":
+            moves.append(Move(startSquare, 6))
+        if startSquare == 60 and piece == "K":
+            moves.append(Move(startSquare, 62))
+    print("got moves in 5 : ", len(moves))
+    
+
+# this function is used to convert pawn into [queen, rook, bishop, knight] and do castling
+def special_moves(board, startSquare, targetSquare, allow_castling, piece):
+    from GUI.pieces import Pieces
+    # piece = board.get_piece(startSquare)
+    print("inside special_moves", startSquare, targetSquare, piece)
+    can_castle = None
+    if piece == "k":
+        can_castle = allow_castling[1]
+    elif piece == "K":
+        can_castle = allow_castling[0]
+    print(can_castle)
+    if Pieces.is_type(piece) == Pieces.pawn:
+        if (targetSquare < 8 and Pieces.get_piece_color(piece) == Pieces.white) or (targetSquare > 55 and Pieces.get_piece_color(piece) == Pieces.black):
+            board.set_piece(targetSquare, "Q" if Pieces.get_piece_color(piece) == Pieces.white else "q")
+            print(board.get_piece(targetSquare))
+            return True
+    elif Pieces.is_type(piece) == Pieces.king and can_castle:
+        if abs(startSquare - targetSquare) == 2 and Pieces.is_type(board.get_piece(targetSquare+1)) == Pieces.rook and Pieces.is_type(board.get_piece(targetSquare-1)) == Pieces.none:
+            board.set_piece(targetSquare-1, board.get_piece(targetSquare+1))
+            board.set_piece(targetSquare+1, None)
+            board.set_piece(targetSquare, piece)
+            return True
+    return False
+    print("got moves in 6 : ", len(moves))
+    
+    
+def is_game_over(board, target_square):
+    if board.dragged_piece not in ['k', 'K'] and board.get_piece(target_square) in ['k', 'K']:
+        board.winner = "White" if board.color_to_move == 8 else "Black"
+        return True
+        

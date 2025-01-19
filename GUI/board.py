@@ -1,6 +1,6 @@
 import pygame
 from .pieces import piece_images, Pieces
-from engine import generate_sliding_piece_moves
+from engine import generate_sliding_piece_moves, generate_pawn_moves, generate_knight_moves, generate_king_moves, special_moves, is_game_over
 
 # CONSTANTS AND COLORS
 BOARD_SIZE = 8
@@ -27,6 +27,9 @@ class Board:
         self.color_to_move = Pieces.white  # White to move first
         self.avaliable_moves = []
         self.opponent_pieces = []
+        self.allow_castling = [True, True]
+        self.game_over = False
+        self.winner = None
         
     def get_piece(self, square):
         return self.square[square]
@@ -121,12 +124,31 @@ class Board:
             # Temporarily remove the piece from the board
             self.set_piece(row_idx * 8 + col_idx, None)
             
-    def stop_dragging(self, col_idx, row_idx):
+    def stop_dragging(self, col_idx, row_idx, board):
         if self.dragged_piece is not None:
             # If the drop position is different from the starting position
-            if (col_idx, row_idx) != self.drag_start_pos:
-                # Place the piece in the new square
-                self.set_piece(row_idx * 8 + col_idx, self.dragged_piece)
+            if (col_idx, row_idx) != self.drag_start_pos and (row_idx * 8 + col_idx) in self.avaliable_moves:
+                print(f"Moved {self.dragged_piece} from {self.drag_start_pos} to {(col_idx, row_idx)}")
+                    
+                print("Start square : ", self.drag_start_pos[1] * 8 + self.drag_start_pos[0])
+                print("End square : ", row_idx * 8 + col_idx)
+                updated = special_moves(board, self.drag_start_pos[1] * 8 + self.drag_start_pos[0], row_idx * 8 + col_idx, self.allow_castling, self.dragged_piece) # Check for special moves
+                if updated:
+                    pygame.display.flip()
+                else:
+                    # Check if game is over
+                    self.game_over = is_game_over(board, row_idx * 8 + col_idx)
+                    
+                    # Place the piece in the new square
+                    self.set_piece(row_idx * 8 + col_idx, self.dragged_piece)
+                    
+                if self.dragged_piece == "K" or self.drag_start_pos == (7, 7):
+                    print("kinged used once")
+                    self.allow_castling[0] = False
+                elif self.dragged_piece == "k" or self.drag_start_pos == (7, 0):
+                    self.allow_castling[1] = False
+                    
+                    
                 # Store the squares to highlight
                 self.highlight_source = self.drag_start_pos
                 self.highlight_destination = (col_idx, row_idx)
@@ -154,12 +176,30 @@ class Board:
         print(f"Clicked piece: {piece} at ({col_idx}, {row_idx})")
         
         # Generate legal moves for all pieces
-        moves_list = generate_sliding_piece_moves(board)
+        if Pieces.is_type(piece) in [Pieces.queen, Pieces.rook, Pieces.bishop]:
+            moves_list = generate_sliding_piece_moves(board)
+        elif Pieces.is_type(piece) == Pieces.knight:
+            moves_list = generate_knight_moves(board)
+        elif Pieces.is_type(piece) == Pieces.pawn:
+            moves_list = generate_pawn_moves(board)
+        elif Pieces.is_type(piece) == Pieces.king:
+            moves_list = generate_king_moves(board)
+            print(self.allow_castling, moves_list)
+            if self.allow_castling[0] == False and 62 in moves_list:
+                print("hellloooooooooo why is 62 still here!!!!!")
+                moves_list.remove(62)
+            if self.allow_castling[1] == False and 6 in moves_list:
+                moves_list.remove(6)            
+            
         # print(moves_list)
         
         # Filter moves for the selected piece
         for move in moves_list:
             if move.startSquare == row_idx * 8 + col_idx:
+                if move.targetSquare == 6 and self.allow_castling[1] == False:
+                    continue
+                if move.targetSquare == 62 and self.allow_castling[0] == False:
+                    continue
                 self.avaliable_moves.append(move.targetSquare)
             piece_on_target_square = self.get_piece(move.targetSquare)
             if piece_on_target_square is not None:

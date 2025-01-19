@@ -1,1 +1,1 @@
-from .moves import precomputed_moves, generate_sliding_piece_moves
+from .moves import precomputed_moves, generate_sliding_piece_moves, generate_pawn_moves, generate_knight_moves, generate_king_moves, special_moves, is_game_over

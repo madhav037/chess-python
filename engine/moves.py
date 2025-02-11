@@ -147,22 +147,24 @@ def generate_king_move(startSquare, piece, board):
         target_piece = board.get_piece(target_square)
         if target_piece is None or Pieces.get_piece_color(target_piece) != Pieces.get_piece_color(piece):
             moves.append(Move(startSquare, target_square))
-    # Simplified castling moves (for example only kingside)
-    if startSquare == 4 and piece == "k":
-        moves.append(Move(startSquare, 6))
-    if startSquare == 60 and piece == "K":
-        moves.append(Move(startSquare, 62))
+    # # Simplified castling moves (for example only kingside)
+    # if startSquare == 4 and piece == "k":
+    #     moves.append(Move(startSquare, 6))
+    # if startSquare == 60 and piece == "K":
+    #     moves.append(Move(startSquare, 62))
 
 def special_moves(board, startSquare, targetSquare, allow_castling, piece):
     from GUI import Pieces
+    
     # Pawn promotion: promote to queen when reaching the back rank.
     if Pieces.is_type(piece) == Pieces.pawn:
         if (targetSquare < 8 and Pieces.get_piece_color(piece) == Pieces.white) or \
            (targetSquare > 55 and Pieces.get_piece_color(piece) == Pieces.black):
             return (targetSquare, "Q" if Pieces.get_piece_color(piece) == Pieces.white else "q")
+    
     # Castling (simplified example)
     if Pieces.is_type(piece) == Pieces.king:
-        if abs(startSquare - targetSquare) == 2:
+        if castling(board=board, startSquare=startSquare, targetSquare=targetSquare) == True:
             if piece == "k":
                 # Black kingside castling: move rook from square 7 to 5
                 return ((targetSquare - 1, board.get_piece(7)), (7, None), (targetSquare, piece))
@@ -258,3 +260,29 @@ def is_game_over(board):
         return True
 
     return False
+
+
+def castling(board, startSquare, targetSquare):
+    from GUI import Pieces
+    piece = board.get_piece(startSquare)
+    
+    if Pieces.is_type(piece) != Pieces.king:
+        return None
+    
+    if board.color_to_move == Pieces.white:    
+        if startSquare != 60:
+            return None
+        if board.get_piece(63) != "R":
+            return None
+        if board.get_piece(61) is not None or board.get_piece(62) is not None:
+            return None
+        return True
+    elif board.color_to_move == Pieces.black:
+        if startSquare != 4:
+            return None
+        if board.get_piece(7) != "r":
+            return None
+        if board.get_piece(5) is not None or board.get_piece(6) is not None:
+            return None
+        return True
+    return None

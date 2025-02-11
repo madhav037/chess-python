@@ -35,6 +35,7 @@ class Board:
         self.winner = None
         self.highlight_source = None
         self.highlight_destination = None
+        self.castle_data = None
         
     def copy(self):
         """Return a shallow copy of the board (sufficient for our simulation)."""
@@ -158,14 +159,14 @@ class Board:
             # If valid move (different square and among available moves)
             if (col_idx, row_idx) != self.drag_start_pos and target_square in self.avaliable_moves:
                 print(f"Moved {self.dragged_piece} from {self.drag_start_pos} to {(col_idx, row_idx)}")
-                updated = special_moves(self, start_square, target_square, self.allow_castling, self.dragged_piece)
-                if updated is not None:
-                    if isinstance(updated, tuple) and len(updated) == 2:
-                        self.set_piece(updated[0], updated[1])
-                    elif isinstance(updated, tuple) and len(updated) == 3:
-                        self.set_piece(updated[0][0], updated[0][1])
-                        self.set_piece(updated[1][0], updated[1][1])
-                        self.set_piece(updated[2][0], updated[2][1])
+                if target_square == 62 and self.dragged_piece == "K":
+                    self.set_piece(self.castle_data[0][0], self.castle_data[0][1])
+                    self.set_piece(self.castle_data[1][0], self.castle_data[1][1])
+                    self.set_piece(self.castle_data[2][0], self.castle_data[2][1])
+                elif target_square == 6 and self.dragged_piece == "k":
+                    self.set_piece(self.castle_data[0][0], self.castle_data[0][1])
+                    self.set_piece(self.castle_data[1][0], self.castle_data[1][1])
+                    self.set_piece(self.castle_data[2][0], self.castle_data[2][1])
                 else:
                     self.set_piece(target_square, self.dragged_piece)
                 # Update castling rights (simplified)
@@ -199,7 +200,7 @@ class Board:
         """
         from engine import (
             generate_sliding_piece_moves, generate_knight_moves,
-            generate_pawn_moves, generate_king_moves, is_check
+            generate_pawn_moves, generate_king_moves, is_check, Move
         )
 
         # Reset available moves and opponent capture highlighting.
@@ -224,12 +225,23 @@ class Board:
             moves_list = generate_pawn_moves(self)
         elif Pieces.is_type(piece) == Pieces.king:
             moves_list = generate_king_moves(self)
+            for move in moves_list:
+                print(move.startSquare, move.targetSquare)
+                
             # Remove castling moves if castling is not allowed.
-            if not self.allow_castling[0]:
-                moves_list = [m for m in moves_list if m.targetSquare != 62]
-            if not self.allow_castling[1]:
-                moves_list = [m for m in moves_list if m.targetSquare != 6]
-
+            if self.allow_castling[0] and row_idx*8+col_idx == 60 and self.color_to_move == Pieces.white:
+                move = special_moves(self, 60, 62, self.allow_castling, "K")
+                print("move : ", move)
+                if move is not None:
+                    moves_list.append(Move(60, 62))
+                    self.castle_data = move
+            if self.allow_castling[1] and row_idx*8+col_idx == 4 and self.color_to_move == Pieces.black:
+                move = special_moves(self, 4, 6, self.allow_castling, "k")
+                if move is not None:
+                    moves_list.append(Move(4, 6))
+                    self.castle_data = move
+            
+                
         # Filter moves so that we only have moves for the clicked piece.
         candidate_moves = [move for move in moves_list if move.startSquare == square_index]
         
